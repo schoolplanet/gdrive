@@ -4,20 +4,22 @@ import (
 	"fmt"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
+	"os"
 	"net/http"
 	"time"
 )
 
 type authCodeFn func(string) func() string
 
-func NewFileSourceClient(clientId, clientSecret, tokenFile string, authFn authCodeFn) (*http.Client, error) {
-	conf := getConfig(clientId, clientSecret)
-
+func NewFileSourceClient(tokenFile string, authFn authCodeFn) (*http.Client, error) {
+	
 	// Read cached token
 	token, exists, err := ReadToken(tokenFile)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to read token: %s", err)
 	}
+	clientId, clientSecret := getOauthClientInfo()
+	conf := getConfig(clientId, clientSecret)
 
 	// Require auth code if token file does not exist
 	// or refresh token is missing
@@ -36,7 +38,8 @@ func NewFileSourceClient(clientId, clientSecret, tokenFile string, authFn authCo
 	), nil
 }
 
-func NewRefreshTokenClient(clientId, clientSecret, refreshToken string) *http.Client {
+func NewRefreshTokenClient(refreshToken string) *http.Client {
+	clientId, clientSecret := getOauthClientInfo()
 	conf := getConfig(clientId, clientSecret)
 
 	token := &oauth2.Token{
@@ -51,7 +54,8 @@ func NewRefreshTokenClient(clientId, clientSecret, refreshToken string) *http.Cl
 	)
 }
 
-func NewAccessTokenClient(clientId, clientSecret, accessToken string) *http.Client {
+func NewAccessTokenClient(accessToken string) *http.Client {
+	clientId, clientSecret := getOauthClientInfo()
 	conf := getConfig(clientId, clientSecret)
 
 	token := &oauth2.Token{
@@ -93,4 +97,11 @@ func getConfig(clientId, clientSecret string) *oauth2.Config {
 			TokenURL: "https://accounts.google.com/o/oauth2/token",
 		},
 	}
+}
+
+func getOauthClientInfo() (string, string) {
+    // Use Client Id and Secret from env.
+    clientId := os.Getenv("OAUTH_CLIENT_ID")
+    clientSecret := os.Getenv("OAUTH_CLIENT_SECRET")
+    return clientId, clientSecret
 }
